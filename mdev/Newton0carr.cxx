@@ -94,10 +94,10 @@ Newton0carr::setup()
     const int j = __mesh.iLN(iL, 1);
 
     __mat->A(i, i) +=  eps * Fij / len;
-    __mat->A(i, j) *= -eps * Fij / len;
+    __mat->A(i, j) += -eps * Fij / len;
 
     __mat->A(j, j) +=  eps * Fij / len;
-    __mat->A(j, i) *= -eps * Fij / len;
+    __mat->A(j, i) += -eps * Fij / len;
 
     value_type psi_i = f_psi[i];
     value_type psi_j = f_psi[j];
@@ -260,7 +260,7 @@ Newton0carr::update()
 
   const int n = __mesh.nN();
   for (int iN = 0; iN < n; iN ++) {
-    f_psi[iN] *= __mat->x(iN);
+    f_psi[iN] += __mat->x(iN);
 
     const value_type ni = f_ni[iN];
     const value_type psi = f_psi[iN];

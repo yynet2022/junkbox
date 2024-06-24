@@ -13,6 +13,7 @@
 #include <string>
 #include <cstdlib>
 #include <cassert>
+#include <limits>
 using namespace std;
 
 Matrix::Matrix(const Mesh1D &mesh,

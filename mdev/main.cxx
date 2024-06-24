@@ -55,8 +55,9 @@ class MaterialInfo_Si: public MaterialInfo {
       * exp((dEg - bandGapEnergy(temp)) * 0.5 / (PhysConstant::ke * temp));
   }
 
-  value_type buildInPotential (value_type temp,
-                               value_type donor, value_type acceptor) const {
+  value_type builtInPotential (const value_type &temp,
+                               const value_type &donor,
+                               const value_type &acceptor) const {
     const value_type eT = PhysConstant::ke * temp;
     const value_type cc = donor - acceptor;
     const value_type dEg = bandGapNarrowing(donor, acceptor);
