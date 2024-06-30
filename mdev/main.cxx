@@ -8,12 +8,14 @@
 #include "Mesh1D.h"
 #include "Field.h"
 #include "Newton0carr.h"
+#include "Newton2carr.h"
 
 #include <iostream>
 #include <vector>
 #include <map>
 #include <cmath>
 #include <cassert>
+#include <sstream>
 using namespace std;
 
 class MaterialInfo_Si: public MaterialInfo {
@@ -124,5 +126,43 @@ int main(int argc, char *argv[])
     n0.setup();
   } while (! n0.isConverge());
 
+  {
+    field.output("psi",  "psi_00");
+    field.output("elec", "elec_00");
+    field.output("hole", "hole_00");
+  }
+
+  cout << endl << "2 carr" << endl;
+  Newton2carr n2(T, mesh, minfo, field, DEL_crit, RES_crit);
+  const value_type dV = 0.1;
+  for (int i = 0; i < 101; i ++) {
+    n2.setVolt(i * dV);
+    n2.setup();
+    itr = 0;
+    do {
+      cout << endl << " #" << ++itr << " ===" << endl;
+      n2.solve();
+      n2.update();
+      n2.setup();
+
+      ostringstream ostr;
+      ostr << i << "_" << itr;
+      field.output ("psi",  string("psi_")+ostr.str());
+      field.output ("elec", string("elec_")+ostr.str());
+      field.output ("hole", string("hole_")+ostr.str());
+    } while (! n2.isConverge());
+
+    ostringstream ostr;
+    ostr << i;
+    field.output ("psi",  string("psi_")+ostr.str());
+    field.output ("elec", string("elec_")+ostr.str());
+    field.output ("hole", string("hole_")+ostr.str());
+  }
+
+  map<string,const MaterialInfo*>::iterator i, e = mmap.end();
+  for (i = mmap.begin(); i != e; i ++)
+    delete i->second;
+
+  cout << "done." << endl;
   return 0;
 }
