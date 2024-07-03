@@ -37,7 +37,7 @@ Newton2carr::Newton2carr (const value_type &temp,
 void
 Newton2carr::setVolt(const value_type &volt)
 {
-  cout << endl << "### volt: " << volt << endl;
+  cout << endl << "### Volt: " << volt << endl;
 
   Field::field_type &f_psi  = __field("psi");
   // Field::field_type &f_elec = __field("elec");
@@ -166,7 +166,7 @@ Newton2carr::setup()
 
     const value_type val = -eps * dPsi * Fij / len;
     __mat->b(i) -=  val; // = -eps *  dPsi * Fij / len
-    __mat->b(i) -= -val; // = -eps * -dPsi * Fij / len
+    __mat->b(j) -= -val; // = -eps * -dPsi * Fij / len
 
     rpmax[i] = max3(rpmax[i],
                     abs(eps * psi_i * Fij / len),
@@ -594,7 +594,7 @@ Newton2carr::update()
         cond_maxQ[j] = q;
         cond_idxQ[j] = iN;
       }
-      const value_type w = __mat->x(iN, j) / (abs(f_v[iN]) / 1e-10*abs(maxV[j]));
+      const value_type w = __mat->x(iN, j) / (abs(f_v[iN]) + 1e-10*abs(maxV[j]));
       if (abs(cond_maxW[j]) <= abs(w)) {
         cond_maxW[j] = w;
         cond_idxW[j] = iN;

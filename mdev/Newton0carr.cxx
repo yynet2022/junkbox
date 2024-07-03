@@ -219,6 +219,7 @@ Newton0carr::setup()
          << ",Na=" << PhysConstant::q * f_Na[idxQ] * __mesh.vCV(idxQ)
          << ",elec=" << PhysConstant::q * f_elec[idxQ] * __mesh.vCV(idxQ)
          << ",hole=" << PhysConstant::q * f_hole[idxQ] * __mesh.vCV(idxQ)
+         << ")=" << vvmax[idxQ]
          << ")" << endl
          << setprecision(pr) << endl;
     __RES_conv = false;

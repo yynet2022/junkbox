@@ -1,0 +1,10 @@
+*.exe
+*.d
+*.o
+*.mtx
+Na_00
+Nd_00
+psi_*
+elec_*
+hole_*
+*~
