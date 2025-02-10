@@ -29,6 +29,20 @@ with fso
    WScript.Echo p, "not exists."
   End if
 
+  Dim folder
+  set folder = .getFolder(p)
+
+  ' ファイル一覧
+  Dim i
+  for each i in folder.files
+    WScript.Echo "file:", i.name
+  next 
+
+  ' サブフォルダ一覧
+  for each i in folder.subfolders
+    WScript.Echo "sub:", i.name
+  next
+
   If .FileExists(f) Then
    WScript.Echo f, "exist."
   Else
