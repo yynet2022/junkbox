@@ -106,6 +106,19 @@
                     <span class="ml-1 text-gray-700">2時間</span>
                 </label>
             </div>
+
+            <!-- Duration Selection -->
+            <div class="flex items-center gap-2 border-l pl-4 border-gray-300 text-sm">
+                <span class="font-semibold text-gray-600">期間:</span>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="radio" name="duration" value="7" checked class="form-radio text-blue-600 h-4 w-4">
+                    <span class="ml-1 text-gray-700">1週間</span>
+                </label>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="radio" name="duration" value="14" class="form-radio text-blue-600 h-4 w-4">
+                    <span class="ml-1 text-gray-700">2週間</span>
+                </label>
+            </div>
         </div>
 
         <div class="flex gap-2">
@@ -123,7 +136,7 @@
         </div>
 
         <!-- Output / Preview Area -->
-        <div class="w-80 bg-white rounded-lg shadow p-4 flex flex-col shrink-0 hidden md:flex">
+        <div class="w-50 bg-white rounded-lg shadow p-4 flex flex-col shrink-0 hidden md:flex">
             <h2 class="text-lg font-bold mb-2 text-gray-700">作成結果</h2>
             <textarea id="outputPreview" readonly class="flex-grow w-full border rounded p-2 text-sm font-mono bg-gray-50 resize-none focus:outline-none mb-2" placeholder="左の表をクリックして日時を選択してください"></textarea>
             
@@ -159,11 +172,15 @@
     const gridContainer = document.getElementById('gridContainer');
     const outputPreview = document.getElementById('outputPreview');
     const intervalInputs = document.querySelectorAll('input[name="interval"]');
+    const durationInputs = document.querySelectorAll('input[name="duration"]');
 
     // Init
     window.onload = () => {
         const today = new Date();
-        startDateInput.valueAsDate = today;
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        startDateInput.value = `${year}-${month}-${day}`;
         
         renderGrid();
         
@@ -178,6 +195,9 @@
         intervalInputs.forEach(input => {
             input.addEventListener('change', resetSelection);
         });
+        durationInputs.forEach(input => {
+            input.addEventListener('change', renderGrid);
+        });
         excludeLunchInput.addEventListener('change', resetSelection);
 
         document.addEventListener('mouseup', () => {
@@ -188,6 +208,10 @@
     function getInterval() {
         return parseInt(document.querySelector('input[name="interval"]:checked').value);
     }
+    
+    function getDuration() {
+        return parseInt(document.querySelector('input[name="duration"]:checked').value);
+    }
 
     function renderGrid() {
         const startDate = new Date(startDateInput.value);
@@ -196,6 +220,7 @@
         const startH = parseInt(startHourInput.value);
         const endH = parseInt(endHourInput.value);
         const interval = getInterval(); // 30, 60, 120
+        const duration = getDuration(); // 7 or 14
 
         // Generate Dates
         let dates = [];
@@ -203,7 +228,11 @@
         let daysCount = 0;
         let safetyLoop = 0;
         
-        while(daysCount < (excludeWeekends ? 5 : 7) && safetyLoop < 30) {
+        const targetDaysCount = duration === 7 
+            ? (excludeWeekends ? 5 : 7) 
+            : (excludeWeekends ? 10 : 14);
+
+        while(daysCount < targetDaysCount && safetyLoop < 60) {
             const dayOfWeek = current.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
