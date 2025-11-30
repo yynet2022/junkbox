@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日程調整ツール</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            background-color: #f3f4f6;
+            user-select: none; /* テキスト選択防止 */
+        }
+        .time-cell {
+            cursor: pointer;
+            transition: all 0.1s ease;
+        }
+        .time-cell:hover {
+            background-color: #e5e7eb;
+        }
+        .time-cell.selected {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #2563eb;
+        }
+        .time-cell.selecting {
+            background-color: #93c5fd;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            max-height: 70vh;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            min-width: 80px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+            padding: 0.5rem;
+            height: 40px; /* セルの高さを固定して操作しやすく */
+        }
+        th {
+            background-color: #f9fafb;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        /* 30分単位の時の補助線スタイル */
+        .interval-30 tr:nth-child(even) td {
+            border-bottom: 2px solid #d1d5db;
+        }
+        
+        .weekend-sat { color: #3b82f6; }
+        .weekend-sun { color: #ef4444; }
+    </style>
+</head>
+<body class="p-4 md:p-8 h-screen flex flex-col">
+
+    <!-- Header / Controls -->
+    <div class="bg-white p-4 rounded-lg shadow mb-4 flex flex-wrap items-center gap-4 justify-between">
+        <div class="flex items-center gap-4 flex-wrap">
+            <h1 class="text-xl font-bold text-gray-800"><i class="far fa-calendar-check mr-2"></i>日程調整作成</h1>
+            
+            <div class="flex items-center gap-2 border-l pl-4 border-gray-300">
+                <label class="text-sm font-semibold text-gray-600">開始日:</label>
+                <input type="date" id="startDate" class="border rounded px-2 py-1 text-gray-700 focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div class="flex items-center gap-2">
+                <label class="flex items-center cursor-pointer">
+                    <input type="checkbox" id="excludeWeekends" checked class="form-checkbox h-4 w-4 text-blue-600 rounded">
+                    <span class="ml-2 text-sm text-gray-700">土日を除く</span>
+                </label>
+            </div>
+            
+            <div class="flex items-center gap-2 border-l pl-4 border-gray-300 text-sm">
+                <span>時間:</span>
+                <input type="number" id="startHour" value="8" min="0" max="23" class="w-12 border rounded px-1 text-center">
+                <span>～</span>
+                <input type="number" id="endHour" value="20" min="1" max="24" class="w-12 border rounded px-1 text-center">
+            </div>
+
+            <!-- Lunch Break Toggle -->
+            <div class="flex items-center gap-2 border-l pl-4 border-gray-300">
+                <label class="flex items-center cursor-pointer" title="12:00-13:00を除外します">
+                    <input type="checkbox" id="excludeLunch" class="form-checkbox h-4 w-4 text-blue-600 rounded">
+                    <span class="ml-2 text-sm text-gray-700">昼休(12-13)除く</span>
+                </label>
+            </div>
+
+            <!-- Interval Selection -->
+            <div class="flex items-center gap-2 border-l pl-4 border-gray-300 text-sm">
+                <span class="font-semibold text-gray-600">単位:</span>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="radio" name="interval" value="30" class="form-radio text-blue-600 h-4 w-4">
+                    <span class="ml-1 text-gray-700">30分</span>
+                </label>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="radio" name="interval" value="60" checked class="form-radio text-blue-600 h-4 w-4">
+                    <span class="ml-1 text-gray-700">1時間</span>
+                </label>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="radio" name="interval" value="120" class="form-radio text-blue-600 h-4 w-4">
+                    <span class="ml-1 text-gray-700">2時間</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="flex gap-2">
+            <button onclick="resetSelection()" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded border border-gray-300 transition">
+                <i class="fas fa-trash-alt mr-1"></i>クリア
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Grid Area -->
+    <div class="flex-grow flex gap-4 overflow-hidden">
+        <!-- Calendar Grid -->
+        <div class="flex-grow bg-white rounded-lg table-container" id="gridContainer">
+            <!-- JS will inject table here -->
+        </div>
+
+        <!-- Output / Preview Area -->
+        <div class="w-80 bg-white rounded-lg shadow p-4 flex flex-col shrink-0 hidden md:flex">
+            <h2 class="text-lg font-bold mb-2 text-gray-700">作成結果</h2>
+            <textarea id="outputPreview" readonly class="flex-grow w-full border rounded p-2 text-sm font-mono bg-gray-50 resize-none focus:outline-none mb-2" placeholder="左の表をクリックして日時を選択してください"></textarea>
+            
+            <button onclick="copyToClipboard()" id="copyBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition shadow-lg flex items-center justify-center">
+                <i class="fas fa-copy mr-2"></i> コピーする
+            </button>
+            <div id="toast" class="hidden text-center text-xs text-green-600 mt-1 font-bold">コピーしました！</div>
+        </div>
+    </div>
+
+    <!-- Mobile Floating Action Button -->
+    <div class="md:hidden fixed bottom-4 right-4 left-4">
+        <button onclick="copyToClipboard()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-full shadow-lg">
+            コピーする
+        </button>
+    </div>
+
+<script>
+    // State
+    let selectedCells = new Set(); // Stores format: "YYYY-MM-DD_MINUTES" (Minutes from 0:00)
+    let isMouseDown = false;
+    let isSelecting = true;
+
+    // Config defaults
+    const WEEK_DAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+    // Elements
+    const startDateInput = document.getElementById('startDate');
+    const excludeWeekendsInput = document.getElementById('excludeWeekends');
+    const excludeLunchInput = document.getElementById('excludeLunch');
+    const startHourInput = document.getElementById('startHour');
+    const endHourInput = document.getElementById('endHour');
+    const gridContainer = document.getElementById('gridContainer');
+    const outputPreview = document.getElementById('outputPreview');
+    const intervalInputs = document.querySelectorAll('input[name="interval"]');
+
+    // Init
+    window.onload = () => {
+        const today = new Date();
+        startDateInput.valueAsDate = today;
+        
+        renderGrid();
+        
+        // Event Listeners: 
+        // 構造が変わらない変更（日付、土日）はデータを保持
+        startDateInput.addEventListener('change', renderGrid);
+        excludeWeekendsInput.addEventListener('change', renderGrid);
+        startHourInput.addEventListener('change', renderGrid); // 時間変更も保持（仕様通り）
+        endHourInput.addEventListener('change', renderGrid);
+
+        // 構造が変わる変更（単位、昼休み）はデータをクリア
+        intervalInputs.forEach(input => {
+            input.addEventListener('change', resetSelection);
+        });
+        excludeLunchInput.addEventListener('change', resetSelection);
+
+        document.addEventListener('mouseup', () => {
+            isMouseDown = false;
+        });
+    };
+
+    function getInterval() {
+        return parseInt(document.querySelector('input[name="interval"]:checked').value);
+    }
+
+    function renderGrid() {
+        const startDate = new Date(startDateInput.value);
+        const excludeWeekends = excludeWeekendsInput.checked;
+        const excludeLunch = excludeLunchInput.checked;
+        const startH = parseInt(startHourInput.value);
+        const endH = parseInt(endHourInput.value);
+        const interval = getInterval(); // 30, 60, 120
+
+        // Generate Dates
+        let dates = [];
+        let current = new Date(startDate);
+        let daysCount = 0;
+        let safetyLoop = 0;
+        
+        while(daysCount < (excludeWeekends ? 5 : 7) && safetyLoop < 30) {
+            const dayOfWeek = current.getDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+            if (!excludeWeekends || !isWeekend) {
+                dates.push(new Date(current));
+                daysCount++;
+            }
+            current.setDate(current.getDate() + 1);
+            safetyLoop++;
+        }
+
+        // Build Table HTML
+        let html = `<table class="w-full border-collapse ${interval === 30 ? 'interval-30' : ''}">`;
+        
+        // Header Row
+        html += `<thead><tr><th class="bg-gray-100 w-20 sticky left-0 z-20 border-r-2">時間</th>`;
+        dates.forEach(d => {
+            const m = d.getMonth() + 1;
+            const date = d.getDate();
+            const day = d.getDay();
+            const dayStr = WEEK_DAYS[day];
+            
+            let colorClass = "";
+            if (day === 0) colorClass = "weekend-sun";
+            if (day === 6) colorClass = "weekend-sat";
+
+            html += `<th class="${colorClass} font-bold">${m}/${date}(${dayStr})</th>`;
+        });
+        html += `</tr></thead>`;
+
+        // Body Rows
+        html += `<tbody>`;
+        
+        // Loop by minutes
+        // whileループにして、昼休みスキップ時にインデックス(m)を操作できるようにする
+        let m = startH * 60;
+        const endMin = endH * 60;
+
+        while (m < endMin) {
+            // Check if this slot overlaps with lunch (12:00-13:00 -> 720-780)
+            const currentSlotStart = m;
+            const currentSlotEnd = m + interval;
+            
+            if (excludeLunch) {
+                // 12:00 = 720分, 13:00 = 780分
+                // 区間が重なるか判定: Start < 780 AND End > 720
+                if (currentSlotStart < 780 && currentSlotEnd > 720) {
+                    // 重なる場合、このスロットはスキップし、次は13:00(780)から再開
+                    // もし現在が既に780以上なら無限ループ防ぐため単にインクリメント
+                    if (m < 780) {
+                        m = 780; 
+                    } else {
+                        m += interval; //念のため
+                    }
+                    continue; // テーブル行を作らず次へ
+                }
+            }
+
+            // ここまで来たら行を作成
+            const hour = Math.floor(m / 60);
+            const min = m % 60;
+            const timeLabel = formatTimeLabel(hour, min);
+
+            html += `<tr>`;
+            html += `<td class="bg-gray-50 font-mono text-sm text-gray-500 sticky left-0 z-10 border-r-2 select-none">${timeLabel}</td>`;
+            
+            dates.forEach(d => {
+                const dateKey = formatDateKey(d);
+                const cellId = `${dateKey}_${m}`;
+                const isSelected = selectedCells.has(cellId);
+                const className = isSelected ? 'selected' : '';
+
+                html += `<td 
+                            class="time-cell ${className}" 
+                            data-id="${cellId}"
+                            onmousedown="handleCellMouseDown(this, '${cellId}')"
+                            onmouseover="handleCellMouseOver(this, '${cellId}')"
+                         ></td>`;
+            });
+            html += `</tr>`;
+            
+            // 次の時間へ
+            m += interval;
+        }
+        html += `</tbody></table>`;
+
+        gridContainer.innerHTML = html;
+        updatePreview();
+    }
+
+    // Helper for Row Label
+    function formatTimeLabel(h, m) {
+        return `${h}:${m.toString().padStart(2, '0')}`;
+    }
+
+    // --- Interaction Logic ---
+
+    function handleCellMouseDown(el, id) {
+        isMouseDown = true;
+        if (selectedCells.has(id)) {
+            selectedCells.delete(id);
+            el.classList.remove('selected');
+            isSelecting = false; 
+        } else {
+            selectedCells.add(id);
+            el.classList.add('selected');
+            isSelecting = true; 
+        }
+        updatePreview();
+    }
+
+    function handleCellMouseOver(el, id) {
+        if (!isMouseDown) return;
+
+        if (isSelecting) {
+            if (!selectedCells.has(id)) {
+                selectedCells.add(id);
+                el.classList.add('selected');
+            }
+        } else {
+            if (selectedCells.has(id)) {
+                selectedCells.delete(id);
+                el.classList.remove('selected');
+            }
+        }
+        updatePreview();
+    }
+
+    function resetSelection() {
+        selectedCells.clear();
+        renderGrid();
+    }
+
+    // --- Formatting Logic ---
+
+    function updatePreview() {
+        if (selectedCells.size === 0) {
+            outputPreview.value = "";
+            return;
+        }
+
+        const sortedIds = Array.from(selectedCells).sort();
+        const interval = getInterval();
+        
+        // Group by Date
+        const grouped = {};
+        
+        sortedIds.forEach(id => {
+            const [dateStr, minStr] = id.split('_');
+            const min = parseInt(minStr);
+            
+            if (!grouped[dateStr]) {
+                grouped[dateStr] = [];
+            }
+            grouped[dateStr].push(min);
+        });
+
+        // Format output
+        let outputLines = [];
+
+        Object.keys(grouped).sort().forEach(dateStr => {
+            const minutesList = grouped[dateStr].sort((a, b) => a - b);
+            const dateObj = new Date(dateStr);
+            const m = dateObj.getMonth() + 1;
+            const d = dateObj.getDate();
+            const w = WEEK_DAYS[dateObj.getDay()];
+            
+            minutesList.forEach(startTimeMin => {
+                const endTimeMin = startTimeMin + interval;
+                
+                let timeStr = "";
+                // 1時間(60) または 2時間(120) の場合は "9-10" や "8-10" 形式
+                if (interval === 60 || interval === 120) {
+                    const startH = Math.floor(startTimeMin / 60);
+                    const endH = Math.floor(endTimeMin / 60);
+                    timeStr = `${startH}-${endH}`;
+                } else {
+                    // 30min format: 9:00-9:30
+                    const startH = Math.floor(startTimeMin / 60);
+                    const startM = startTimeMin % 60;
+                    const endH = Math.floor(endTimeMin / 60);
+                    const endM = endTimeMin % 60;
+                    
+                    const sStr = `${startH}:${startM.toString().padStart(2, '0')}`;
+                    const eStr = `${endH}:${endM.toString().padStart(2, '0')}`;
+                    timeStr = `${sStr}-${eStr}`;
+                }
+
+                outputLines.push(`${m}/${d}(${w}) ${timeStr}`);
+            });
+        });
+
+        const uniqueLines = [...new Set(outputLines)];
+        outputPreview.value = uniqueLines.join('\n');
+    }
+
+    // --- Utilities ---
+
+    function formatDateKey(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function copyToClipboard() {
+        const text = outputPreview.value;
+        if (!text) return;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(showToast).catch(() => selectAndCopyFallback());
+        } else {
+            selectAndCopyFallback();
+        }
+    }
+
+    function selectAndCopyFallback() {
+        outputPreview.select();
+        document.execCommand('copy');
+        showToast();
+    }
+
+    function showToast() {
+        const toast = document.getElementById('toast');
+        const btn = document.getElementById('copyBtn');
+        const originalContent = btn.innerHTML;
+        
+        btn.innerHTML = '<i class="fas fa-check mr-2"></i> コピー完了';
+        btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+        btn.classList.add('bg-green-600', 'hover:bg-green-700');
+
+        toast.classList.remove('hidden');
+        
+        setTimeout(() => {
+            toast.classList.add('hidden');
+            btn.innerHTML = originalContent;
+            btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            btn.classList.remove('bg-green-600', 'hover:bg-green-700');
+        }, 2000);
+    }
+</script>
+</body>
+</html>
