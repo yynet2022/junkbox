@@ -1,6 +1,8 @@
 import httpx
 import json
 import pprint
+import logging
+import logging_setup
 
 # CiNii Research API の基本設定
 BASE_URL = "https://cir.nii.ac.jp/opensearch/v2/all"
@@ -83,6 +85,8 @@ def process_results(data):
             continue
 
 if __name__ == "__main__":
+    logging_setup.setup()
+
     search_keyword = "CMOS"  # 検索したいキーワードを設定
     
     # 検索を実行
