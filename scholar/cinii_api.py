@@ -1,7 +1,8 @@
 import httpx
 import logging
-import logging_setup
 # import pprint
+
+logger = logging.getLogger(__name__)
 
 # CiNii Research API の基本設定
 # all/projectsAndProducts/articles/data/books/dissertations/projects/researchers
@@ -27,7 +28,7 @@ def search_cinii_research(keyword, count=20, start=1):
         'start': start,           # ページ番号 (デフォルト1)
     }
 
-    logging.info(f"Searching: {keyword}")
+    logger.info(f"Searching: {keyword}")
     response = httpx.get(BASE_URL, params=params, timeout=10.0)
 
     # HTTPステータスコードをチェック
@@ -69,11 +70,19 @@ def process_results(data):
             print(f"  Date:  {date}")
 
         except (KeyError, IndexError) as e:
-            logging.error(f'parse error: {e}')
+            logger.error(f'parse error: {e}')
             continue
 
 
 if __name__ == "__main__":
+    import os
+    import sys
+    target_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), '..'))
+    if target_path not in sys.path:
+        sys.path.append(target_path)
+
+    from pyetc import logging_setup
     logging_setup.setup()
 
     search_keyword = "ロボティクス"  # 検索したいキーワードを設定
