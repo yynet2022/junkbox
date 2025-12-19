@@ -1,48 +1,40 @@
 import httpx
-import json
-import pprint
 import logging
 import logging_setup
+# import pprint
 
 # CiNii Research API の基本設定
-BASE_URL = "https://cir.nii.ac.jp/opensearch/v2/all"
+# all/projectsAndProducts/articles/data/books/dissertations/projects/researchers
+BASE_URL = "https://cir.nii.ac.jp/opensearch/v2/articles"
 
-def search_cinii_research(keyword, count=20):
+
+def search_cinii_research(keyword, count=20, start=1):
     """
     CiNii Researchを検索し、結果をJSONで返す関数。
-    
+
     :param keyword: 検索キーワード
     :param count: 取得する件数 (最大200)
     :return: 検索結果のJSONデータ (辞書型)
     """
-    
+
     # クエリパラメータを設定
     params = {
         'q': keyword,              # 検索キーワード
         'format': 'json',          # レスポンス形式をJSONに指定
         'count': count,            # 取得件数
         'from': 2025,
-        # 'p' : 1,                 # ページ番号 (デフォルト1)
-        # 'range': 'all',          # 検索対象 (all, title, author, etc.)
+        'sortorder': 0,
+        'start': start,           # ページ番号 (デフォルト1)
     }
 
-    try:
-        # httpxでGETリクエストを送信
-        print(f"検索中: {keyword}")
-        response = httpx.get(BASE_URL, params=params, timeout=10.0)
-        
-        # HTTPステータスコードをチェック
-        response.raise_for_status() 
-        
-        # レスポンスボディをJSONとしてパース
-        return response.json()
+    logging.info(f"Searching: {keyword}")
+    response = httpx.get(BASE_URL, params=params, timeout=10.0)
 
-    except httpx.RequestError as e:
-        print(f"リクエストエラーが発生しました: {e}")
-        return None
-    except json.JSONDecodeError:
-        print("JSONのデコードエラーが発生しました。不正なレスポンスです。")
-        return None
+    # HTTPステータスコードをチェック
+    response.raise_for_status()
+
+    return response.json()
+
 
 def process_results(data):
     """
@@ -53,44 +45,41 @@ def process_results(data):
         return
 
     print("\n--- 検索結果 ---")
-    
-    items = data['items']
+
+    title = data.get('title', '')
+    print(f'Title: {title}')
+    total = data.get('opensearch:totalResults', '')
+    print(f'Total: {total}')
+    sindex = data.get('opensearch:startIndex', '')
+    print(f'Start Index: {sindex}')
+    nitems = data.get('opensearch:itemsPerPage', '')
+    print(f'Items/Page: {nitems}')
+
+    items = data.get('items', [])
     for i, item in enumerate(items):
         # pprint.pprint(item)
         try:
-            # 論文タイトル (title)
-            # title = item['title'][0]['@value']
-            title = item['title']
-            
-            # 著者名 (creator)
-            # 複数の著者名がリストとして入っている場合がある
-            creators = [c for c in item.get('dc:creator', [])]
-            author_str = ", ".join(creators)
-            
-            # URL (link)
-            url = item['link']['@id']
-
-            # Publication Date
+            title = item.get('title', '')
+            url = item.get('link', dict()).get('@id', '')
             date = item.get('prism:publicationDate', '')
 
             print(f"[{i+1}]")
-            print(f"  タイトル: {title}")
-            print(f"  著者:     {author_str if author_str else '不明'}")
-            print(f"  URL:      {url}")
-            print(f"  Date:     {date}")
-        
+            print(f"  Title: {title}")
+            print(f"  Link:  {url}")
+            print(f"  Date:  {date}")
+
         except (KeyError, IndexError) as e:
-            # データ構造が不完全なアイテムをスキップ
-            print(f"  [データのパースエラー: {e} - このアイテムはスキップされます]")
+            logging.error(f'parse error: {e}')
             continue
+
 
 if __name__ == "__main__":
     logging_setup.setup()
 
-    search_keyword = "CMOS"  # 検索したいキーワードを設定
-    
+    search_keyword = "ロボティクス"  # 検索したいキーワードを設定
+
     # 検索を実行
-    search_data = search_cinii_research(search_keyword)
-    
+    search_data = search_cinii_research(search_keyword, 10)
+
     # 結果の処理と表示
     process_results(search_data)
