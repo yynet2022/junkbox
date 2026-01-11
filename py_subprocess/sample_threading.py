@@ -52,14 +52,6 @@ else:
     USE_MSLEX = False
 
 
-def read_stream(stream, buffer, prefix):
-    for line in iter(stream.readline, ""):
-        if line:
-            print(f"[{prefix}] {line}", end="")
-            buffer.append(line)
-    stream.close()
-
-
 def run_shell_command(cmd: str):
     ncmd = cmd
     if not USE_MSLEX:
@@ -89,12 +81,23 @@ def run_shell_command(cmd: str):
 
     stdout_buf, stderr_buf = [], []
 
+    ev = threading.Event()
+
+    def _read_stream(stream, buffer, prefix):
+        for line in iter(stream.readline, ""):
+            if line:
+                print(f"[{prefix}] {line}", end="")
+                buffer.append(line)
+            if ev.is_set():
+                break
+        stream.close()
+
     # 各ストリーム用にスレッドを作成
     t1 = threading.Thread(
-        target=read_stream, args=(proc.stdout, stdout_buf, "OUT")
+        target=_read_stream, args=(proc.stdout, stdout_buf, "OUT")
     )
     t2 = threading.Thread(
-        target=read_stream, args=(proc.stderr, stderr_buf, "ERR")
+        target=_read_stream, args=(proc.stderr, stderr_buf, "ERR")
     )
 
     t1.start()
@@ -102,9 +105,9 @@ def run_shell_command(cmd: str):
 
     err = ""
     try:
+        proc.wait()
         t1.join()
         t2.join()
-        proc.wait()
     except (KeyboardInterrupt, Exception) as e:
         proc.terminate()
         proc.wait()
@@ -113,6 +116,7 @@ def run_shell_command(cmd: str):
         err = f"{e.__class__.__name__}: {e}"
 
     stat = "ok"
+    # stat = "timed out"
     if proc.returncode != 0:
         stat = "called process failed"
     if err:
