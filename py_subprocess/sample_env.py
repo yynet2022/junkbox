@@ -1,4 +1,3 @@
-import json
 import os
 import subprocess
 import sys
@@ -110,6 +109,7 @@ def run_shell_command(cmd: str):
 
 
 if __name__ == "__main__":
+    import json
 
     def _run(cmd):
         try:
@@ -125,3 +125,4 @@ if __name__ == "__main__":
     _run('echo "foo `A` bar"')
     _run("echo 'A'")
     _run("ls /foo")
+    _run("/bin/sh -cx 'echo A && echo B'")
