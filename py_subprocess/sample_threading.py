@@ -100,12 +100,26 @@ def run_shell_command(cmd: str):
     t1.start()
     t2.start()
 
-    t1.join()
-    t2.join()
-    proc.wait()
+    err = ""
+    try:
+        t1.join()
+        t2.join()
+        proc.wait()
+    except (KeyboardInterrupt, Exception) as e:
+        proc.terminate()
+        proc.wait()
+        t1.join()
+        t2.join()
+        err = f"{e.__class__.__name__}: {e}"
+
+    stat = "ok"
+    if proc.returncode != 0:
+        stat = "called process failed"
+    if err:
+        stat = err
 
     return {
-        "status": ("ok" if proc.returncode == 0 else "called process failed"),
+        "status": stat,
         "original_command": cmd,
         "stdout": "".join(stdout_buf).strip(),
         "stderr": "".join(stderr_buf).strip(),
@@ -127,4 +141,4 @@ if __name__ == "__main__":
             print(f"{e.__class__.__name__}: {e}")
 
     # 実行例
-    _run("/bin/sh -c 'ls -l; ls -l /foo; ls -l'")
+    _run("/bin/sh -c 'ls -l; ls -l /foo; sleep 10; ls -l'")
