@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import List, Any
+from typing import Any, List
 
 
 def split_list(data: List[Any], nsplit: int) -> List[List[Any]]:
@@ -16,21 +16,21 @@ def split_list(data: List[Any], nsplit: int) -> List[List[Any]]:
     nsplit = min(nsplit, n)
 
     m = n // nsplit  # 基本の要素数
-    p = n % nsplit   # 余りの要素数（これを先頭の p グループに1つずつ配分する）
+    p = n % nsplit  # 余りの要素数（これを先頭の p グループに1つずつ配分する）
 
     result = []
     start = 0
     for i in range(nsplit):
         # このグループに割り当てる個数
         size = m + (1 if i < p else 0)
-        result.append(data[start: start + size])
+        result.append(data[start : start + size])
         start += size
 
     return result
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     a = list(range(18))
-    num_splits = int(len(a)**0.5)
+    num_splits = int(len(a) ** 0.5)
     print(f"Original: {a}")
     print(f"Splits:   {split_list(a, num_splits)}")

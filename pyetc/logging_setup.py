@@ -1,24 +1,23 @@
 import logging
 import logging.config
 
-
 _LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'simple': {
-            'format': '%(asctime)s %(name)s:%(lineno)s %(funcName)s:%(levelname)s: %(message)s'
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {
+            "format": "%(asctime)s %(name)s:%(lineno)s %(funcName)s:%(levelname)s: %(message)s"
         }
     },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
     },
 }
 
@@ -27,4 +26,4 @@ logging.config.dictConfig(_LOGGING)
 
 
 def setup():
-    logger.info('Setup OK.')
+    logger.info("Setup OK.")

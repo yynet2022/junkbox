@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 class AccessDenied(Exception):
     """プロジェクトのベースディレクトリ外のパスが指定された場合に送出される例外。"""
+
     pass
 
 
