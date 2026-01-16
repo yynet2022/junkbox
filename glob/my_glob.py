@@ -43,7 +43,9 @@ def glob(pattern: str, case_sensitive: bool = True) -> List[Path]:
     current_root = root
 
     for part in parts:
-        if fixed_path_found and not any(c in part for c in "*?[]"):
+        if (fixed_path_found
+            and (current_root / part).exists()
+            and not any(c in part for c in "*?[]")):
             current_root = current_root / part
         else:
             fixed_path_found = False
