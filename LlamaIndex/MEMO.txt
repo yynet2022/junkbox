@@ -1,0 +1,14 @@
+
+pip install llama-index openai
+
+from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.core import Settings
+
+# モデル名を明示的に指定
+Settings.embed_model = OpenAIEmbedding(
+    model="text-embedding-3-small",  # ここで指定！ (largeも可)
+    api_base="https://your-onpre-server.com/v1",
+    api_key="your-key",
+    http_client=http_client,
+    # dimensions=512 # モデルがサポートしていれば、次元数を絞って軽量化も可能
+)
