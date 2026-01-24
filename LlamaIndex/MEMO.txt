@@ -12,3 +12,69 @@ Settings.embed_model = OpenAIEmbedding(
     http_client=http_client,
     # dimensions=512 # モデルがサポートしていれば、次元数を絞って軽量化も可能
 )
+
+---
+from llama_index.core import SimpleDirectoryReader
+from llama_index.core.node_parser import MarkdownNodeParser
+
+# 1. データを読み込む
+documents = SimpleDirectoryReader("./your_markdown_data").load_data()
+
+# 2. Markdown専用のパーサーを用意
+# H1(#), H2(##), H3(###) の構造を理解して分割してくれます
+parser = MarkdownNodeParser()
+
+# 3. ドキュメントをノード（チャンク）に変換
+nodes = parser.get_nodes_from_documents(documents)
+
+# 確認：どんな感じで分割されたか見てみる
+print(f"分割された数: {len(nodes)}")
+print(nodes[0].text)
+
+---
+import os
+from pathlib import Path
+from llama_index.core import Document, VectorStoreIndex
+from llama_index.core.node_parser import MarkdownNodeParser
+from docling.document_converter import DocumentConverter
+
+# 設定
+DATA_DIR = "./data"
+PERSIST_DIR = "./storage"  # 任意の保存先
+
+# 1. Docling の準備
+converter = DocumentConverter()
+llama_docs = []
+
+# 2. ディレクトリ内のPDFを走査して変換 (SimpleDirectoryReaderの代わり)
+print("Converting PDFs to Markdown...")
+for file_path in Path(DATA_DIR).glob("*.pdf"):
+    try:
+        # PDF -> Markdown 変換 (Docling実行)
+        result = converter.convert(file_path)
+        md_text = result.document.export_to_markdown()
+        
+        # LlamaIndex用の Document オブジェクトに変換
+        # ファイル名などをメタデータとして入れておくと後で便利です
+        doc = Document(
+            text=md_text,
+            metadata={"file_name": file_path.name, "file_path": str(file_path)}
+        )
+        llama_docs.append(doc)
+        print(f"Processed: {file_path.name}")
+        
+    except Exception as e:
+        print(f"Error converting {file_path.name}: {e}")
+
+# 3. Markdown構造（見出しなど）を理解してノードに分割
+parser = MarkdownNodeParser()
+nodes = parser.get_nodes_from_documents(llama_docs)
+
+# 4. ノードからインデックスを作成
+# (from_documents ではなく、分割済みの nodes を直接渡します)
+index = VectorStoreIndex(nodes)
+
+# 5. 保存 (元コードと同じ)
+index.storage_context.persist(persist_dir=PERSIST_DIR)
+
+print("Indexing finished!")
