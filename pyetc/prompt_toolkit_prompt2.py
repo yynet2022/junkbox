@@ -1,10 +1,14 @@
-"""Line-start slash command custom completer sample.
+"""Line-start slash command completer with top-row prompt sample.
 
 This module demonstrates a custom Completer implementation that strictly
 triggers completion only when a slash ('/') appears at the start of the line,
-preventing unwanted completions for slashes inside normal text or paths.
+and scrolls the terminal so that the prompt is always displayed on the top row
+while preserving previous output in the terminal scrollback buffer.
 """
 
+import shutil
+import os
+import sys
 from collections.abc import Iterable
 
 from prompt_toolkit import PromptSession
@@ -33,7 +37,7 @@ class SlashCommandCompleter(Completer):
         text_before_cursor: str = document.text_before_cursor
         stripped_leading: str = text_before_cursor.lstrip()
 
-        # 行頭が '/' で始まらない場合は補完しない
+        # 行頭が '/' で始まらない場合は補完しない（空文字の場合は全候補表示）
         if len(stripped_leading) > 0 and not stripped_leading.startswith("/"):
             return
 
@@ -66,6 +70,23 @@ def handle_ctrl_j(event: KeyPressEvent) -> None:
     event.current_buffer.insert_text("\n")
 
 
+def scroll_to_top() -> None:
+    """画面を行数分押し上げて、カーソルを最上段へ移動します。
+
+    画面を消去（クリア）するのではなく改行でスクロールアウトさせるため、
+    ターミナルを上へスクロールすれば以前の出力履歴を確認できます。
+    """
+    lines: int = shutil.get_terminal_size().lines
+
+    # ANSIエスケープシーケンスを受け付けるおまじない
+    if os.name == 'nt':
+        os.system("")
+
+    # sys.stdout.write(f"\033[{lines}S\033[H")
+    sys.stdout.write("\n" * lines + "\033[H")
+    sys.stdout.flush()
+
+
 def main() -> None:
     """メイン実行ループ。"""
     # complete_while_typing=False で Tabキー押下時のみ補完
@@ -79,8 +100,9 @@ def main() -> None:
         complete_style=CompleteStyle.READLINE_LIKE,
     )
 
-    print("=== Custom Slash Completer Sample (Line-start only) ===")
     while True:
+        # プロンプト表示直前に画面をスクロールして最上段に配置
+        scroll_to_top()
         try:
             user_input: str = session.prompt("> ").strip()
         except (KeyboardInterrupt, EOFError):
