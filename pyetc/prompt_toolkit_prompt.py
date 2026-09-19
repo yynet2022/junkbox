@@ -1,9 +1,13 @@
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.completion import FuzzyWordCompleter
 from prompt_toolkit.key_binding import KeyBindings
 
-my_completer = FuzzyWordCompleter(
+word_completer = WordCompleter(
+    ["/exit", "/quit", "/reload", "/help"]
+)
+fuzzy_completer = FuzzyWordCompleter(
     ["/exit", "/quit", "/reload", "/help"]
 )
 
@@ -25,7 +29,7 @@ def _(event):
 session = PromptSession(history=history,
                         key_bindings=kb,
                         multiline=True,
-                        completer=my_completer)
+                        completer=word_completer)
 
 while True:
     user_input = session.prompt("> ").strip()
